@@ -2,15 +2,20 @@ const express = require('express');
 const JWT = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const Users = require('../models/user');
-const auth = require('../middlewares/auth');
 const Admins = require('../models/admin');
+const purchaseModel = require('../models/purchase');
+const course = require('../models/course');
+const authAdmin = require('../middlewares/authAdmin');
+const course = require('../models/course');
 
-const router = express.Router();
+
+
+const adminRouter = express.Router();
 connectDb;
 
-JWT_SECRET = "dkshyfgasuifiso";
+JWT_SECRET_ADMIN = "plkmnjijnbnjhbvdgb";
 
-router.post('/signup', async(req,res)=>{
+adminRouter.post('/signup', async(req,res)=>{
     const { username, name, email, password } = req.body;
 
     try{
@@ -44,7 +49,7 @@ router.post('/signup', async(req,res)=>{
     }
 })
 
-router.post('/signin', async (req,res)=>{
+adminRouter.post('/signin', async (req,res)=>{
     const { username, password } = req.body;
 
     try{
@@ -68,7 +73,7 @@ router.post('/signin', async (req,res)=>{
             userId: user._id,
             username: user.username
             },
-            process.env.JWT_SECRET,
+            process.env.JWT_SECRET_ADMIN,
             { expiresIn: "1d" }
         );
 
@@ -85,9 +90,58 @@ router.post('/signin', async (req,res)=>{
     }
 })
 
-router.get('/me', auth, async (req, res) => {
-    const user = await Admins.findById(req.userId).select("-password");
-    res.json(user);
+adminRouter.post('/course',  (req,res)=>{
+    const adminId = req.userId;
+    
+    const { title, description, price, imageUrl} = req.body;
+
+    course.create({
+        title: title,
+        description: description,
+        price: price,
+        imageUrl: imageUrl,
+        creatorId: adminId
+    });
+    
+    res.json({
+        message: "Course created",
+        courseId: course._id, 
+    })
+
 });
 
-module.exports = router;
+adminRouter.put('/course', authAdmin , async(req,res)=>{
+     const adminId = req.userId;
+
+    const { title, description, imageUrl, price, courseId } = req.body;
+
+    const course = await course.updateOne({
+        _id: courseId, 
+        creatorId: adminId 
+    }, {
+        title: title, 
+        description: description, 
+        imageUrl: imageUrl, 
+        price: price
+    })
+
+    res.json({
+        message: "Course updated",
+        courseId: course._id
+    }) 
+})
+
+adminRouter.get("/course/bulk", authAdmin,async function(req, res) {
+    const adminId = req.userId;
+
+    const courses = await course.find({
+        creatorId: adminId 
+    });
+
+    res.json({
+        message: "Course updated",
+        courses
+    });
+});
+
+module.exports = adminRouter;

@@ -84,9 +84,27 @@ router.post('/signin', async (req,res)=>{
     }
 })
 
-router.get('/me', auth, async (req, res) => {
-    const user = await Users.findById(req.userId).select("-password");
-    res.json(user);
+router.get('/purchases', auth, async(req,res)=>{
+    const userid = req.userId;
+
+    const purchases = await purchaseModel.find({
+        userId: userid,
+    });
+
+    let purchasedCourseIds = [];
+    
+    for(let i =0;i<purchases.length;i++){
+        purchasedCourseIds.push(purchases[i].courseId);
+    }
+    
+    const courseData = await course.find({
+        _id: { $in: purchasedCourseIds }
+    });
+
+    res.json({
+        purchases,
+        courseData
+    });
 });
 
 module.exports = router;
